@@ -38,7 +38,8 @@ INSTALLED_APPS = [
 
     #Customer models
     'crispy_forms',
-    'authentication'
+    'authentication',
+    'ticket'
 ]
 
 MIDDLEWARE = [

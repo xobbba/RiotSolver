@@ -42,11 +42,6 @@ class Organization(models.Model):
     org_code = models.CharField(max_length=128)
 
 
-class TicketType(models.Model):
-    type_id = models.IntegerField(primary_key=True)
-    type_name = models.CharField(max_length=256)
-
-
 class User(AbstractBaseUser, PermissionsMixin):
     fio = models.CharField(max_length=256, null=False)
     username = models.CharField(db_index=True, max_length=255, unique=True)
@@ -86,22 +81,33 @@ class User(AbstractBaseUser, PermissionsMixin):
         return token.encode('utf-8')
 
 
-class Ticket(models.Model):
-    ticket_id = models.IntegerField(primary_key=True)
-    staff_id = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
-    org_id = models.ForeignKey(Organization.org_id, on_delete=models.CASCADE, null=False)
-    ticket_type = models.ForeignKey(TicketType.type_id, on_delete=models.CASCADE, null=False)
-    created_date = models.DateTimeField()
-    end_date = models.DateTimeField()
+class Admin(AbstractBaseUser, PermissionsMixin):
+    fio = models.BooleanField(max_length=255, null=False)
+    username = models.CharField(max_length=128, null=False, unique=True)
+    password = models.CharField(max_length=128, null=False)
+    active_status = models.BooleanField(default=True)
+    email = models.EmailField(max_length=128, null=False, unique=True)
+    phone = models.CharField(max_length=11)
 
-    def create_ticket(self, ticket_type, staff_id, org_id):
-        if not ticket_type and not staff_id and not org_id:
-            raise Exception('Незаполнены обязательные поля')
+    def __str__(self):
+        return self.email
 
+    @property
+    def token(self):
+        return self._generate_jwt_token()
 
+    def get_full_name(self):
+        return self.fio
 
-class Document(models.Model):
-    ticket_id = models.ForeignKey(Ticket, on_delete=models)
-    html_result_link = models.CharField(max_length=256)
-    pdf_result_link = models.CharField(max_length=256)
-    created_date = models.DateTimeField()
+    def get_short_name(self):
+        return self.username
+
+    def _generate_jwt_token(self):
+        dt = datetime.now() + timedelta(days=1)
+
+        token = jwt.encode({
+            'id': self.pk,
+            'exp': str(int(dt.timestamp()))
+        }, settings.SECRET_KEY, algorithm='HS256')
+
+        return token.encode('utf-8')
